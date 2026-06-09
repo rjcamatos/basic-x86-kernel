@@ -1,0 +1,85 @@
+#include "../lib/types.h"
+#include "../lib/mem.h"
+#include "../lib/printk.h"
+
+struct RSDPDescriptor {
+	char Signature[8];
+	uint8_t Checksum;
+	char OEMID[6];
+	uint8_t Revision;
+	uint32_t RsdtAddress;
+};
+
+struct RSDPDescriptor20 {
+	struct RSDPDescriptor firstPart;
+	uint32_t Length;
+	uint64_t XsdtAddress;
+	uint8_t ExtendedChecksum;
+	uint8_t reserved[3];
+};
+
+struct ACPISDTHeader {
+  char Signature[4];
+  uint32_t Length;
+  uint8_t Revision;
+  uint8_t Checksum;
+  char OEMID[6];
+  char OEMTableID[8];
+  uint32_t OEMRevision;
+  uint32_t CreatorID;
+  uint32_t CreatorRevision;
+
+  struct ACPISDTHeader *other1;
+  struct ACPISDTHeader *other2;
+  struct ACPISDTHeader *other3;
+  struct ACPISDTHeader *other4;
+  struct ACPISDTHeader *other5;
+  struct ACPISDTHeader *other6;
+  struct ACPISDTHeader *other7;
+  struct ACPISDTHeader *other8;
+  struct ACPISDTHeader *other9;
+  struct ACPISDTHeader *other10;
+};
+
+bool_t acpi_checksum_pass(struct RSDPDescriptor *addr)
+{
+	int_t ret = 0;
+	uint_t idx = 0;
+	for( ;idx < sizeof(struct RSDPDescriptor); idx++ )
+	{
+		ret += ((char_t*)addr)[idx];
+	}
+	if( (ret & 0xFF) == 0 ) return TRUE;
+	return FALSE;
+}
+
+void acpi_find()
+{
+	//http://forum.osdev.org/viewtopic.php?f=1&t=22889
+	//http://wiki.osdev.org/RSDP#Detecting_the_RSDP
+	//memory region from 0x000E0000 to 0x000FFFFF (the main BIOS area below 1 MB)
+
+	bool_t rsdp_found = FALSE;
+	struct RSDPDescriptor *ptr = (struct RSDPDescriptor *)0xE0000;
+	while( ptr <= (struct RSDPDescriptor *)0xFFFFF )
+	{
+		if( memcmp(ptr->Signature,"RSD PTR ",8) == 0 )
+		{
+			if( ( rsdp_found = acpi_checksum_pass(ptr) ) ) break;
+		}
+		ptr = (struct RSDPDescriptor *)((uint_t)ptr + 16);
+	}
+
+	if( ! rsdp_found )
+	{
+		printk("ACPI NOT FOUND\n");
+		return;
+	} else {
+		printk("ACPI FOUND\n");
+	}
+
+	struct ACPISDTHeader *h = ptr->RsdtAddress; // manual mapped to TEST
+	uint32_t PointerToOtherSDT[(h->Length - sizeof(struct ACPISDTHeader)) / 4];
+
+
+}

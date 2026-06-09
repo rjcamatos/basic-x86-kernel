@@ -1,0 +1,18 @@
+
+
+shell ../qemu-system-i386w -S -gdb tcp:127.0.0.1:1234,ipv4 -rtc base=localtime -kernel ./Debug/Kernel -append "THE KERNEL ARGUMENTS" &
+
+
+set $KERNEL_VMA=0x00101000
+set $KERNEL_LMA=0xc0101000
+
+add-symbol-file Debug/Kernel $KERNEL_LMA
+
+add-symbol-file Debug/Kernel $KERNEL_VMA  
+
+b entry
+b kmain
+
+
+
+ 
