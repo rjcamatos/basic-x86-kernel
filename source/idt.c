@@ -82,7 +82,7 @@ void idt_interrupt_handler(uint32_t vector, idt_hargs_t args, uint32_t error)
 	lapic_eio(vector); // required when lapic is enabled
 }
 
-void idt_init()
+void idt_init(void)
 {
 	printk("Initializing IDT !\n");
 

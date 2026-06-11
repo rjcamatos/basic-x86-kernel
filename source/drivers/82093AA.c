@@ -16,7 +16,7 @@ void ioapic_write(uint8_t reg, uint32_t value)
 	*(ioapic_base +4) = value;
 }
 
-void ioapic_init()
+void ioapic_init(void)
 {
 	printk("Initializing IOAPIC 82093AA !\n");
 

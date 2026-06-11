@@ -3,7 +3,7 @@
 #include "../lib/ioport.h"
 #include "../lib/printk.h"
 
-void pic_init()
+void pic_init(void)
 {
 	printk("Initializing PIC 8259A !\n");
 

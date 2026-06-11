@@ -13,7 +13,7 @@
 gdt_entry_t gdt[GDT_LIMIT];
 gdt_lgdt_t  gdtl;
 
-void gdt_init()
+void gdt_init(void)
 {
 	printk("Initializing GDT !\n");
 

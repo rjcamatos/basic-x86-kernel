@@ -7,6 +7,9 @@
  * pressionada ou um sinal do temporizador —, ele suspende temporariamente o 
  * código atual, consulta a IDT para encontrar a função responsável por lidar 
  * com esse evento (chamada de Interrupt Service Routine - ISR) e executa-a.
+ * 
+ * Notes By GEMINI
+ * 
  */
 
 #ifndef IDT_H_
@@ -45,11 +48,6 @@ typedef struct {
 /**
  * @brief Estrutura dos argumentos passados para os Handlers de Interrupção.
  * Mapeia o estado dos registos empilhados (geralmente via PUSHAD em Assembly).
- * 
- * NOTA DE ARQUITETURA: Os campos comentados abaixo fazem parte do empilhamento do CPU.
- * Como passas esta estrutura por valor em idt_interrupt_handler, o compilador C só deve
- * mapear fisicamente o bloco 'registers'. Deixar os outros campos comentados previne 
- * que o compilador os tente ler desalinhados da memória contígua da stack.
  */
 typedef struct {
 	struct {
@@ -92,7 +90,7 @@ typedef struct {
 /**
  * @brief Inicializa a IDT configurando as gates padrão e aplicando o LIDT.
  */
-extern void idt_init();
+extern void idt_init(void);
 
 /**
  * @brief Carrega o registo IDTR do CPU com a estrutura configurada.
