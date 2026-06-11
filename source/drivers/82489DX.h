@@ -282,12 +282,19 @@ typedef struct {
 
 
 extern volatile voidptr_t lapic_base;
+
 #define LAPIC_REG(REG)		*((uint32_t*)((uint32_t)lapic_base|REG))
-void lapic_init();
-void lapic_remap(uint32_t addr);
-uint32_t* lapic_get_base();
-void lapic_enable();
-void lapic_timer_set(uint32_t lvttr_flags, uint32_t dcr_flags, uint32_t icr_flags);
-void lapic_eio(uint32_t val);
+
+extern void lapic_init(void);
+
+extern void lapic_remap(uint32_t addr);
+
+extern uint32_t* lapic_get_base(void);
+
+extern void lapic_enable(void);
+
+extern void lapic_timer_set(uint32_t lvttr_flags, uint32_t dcr_flags, uint32_t icr_flags);
+
+extern void lapic_eio(uint32_t val);
 
 #endif /* DRIVERS_82489DX_H_ */

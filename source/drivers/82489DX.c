@@ -14,7 +14,7 @@
 // Endereção base da memória da LOCAL APIC. Comun nas máquinas Virtuais.
 volatile voidptr_t lapic_base = (voidptr_t)0xFEE00000;
 
-void lapic_init()
+void lapic_init(void)
 {
 	ioapic_init(); //Inicia a IOAPIC, este driver, contem todas essas funcoes. por forma a nao voltar a defeni-las
 
@@ -43,14 +43,14 @@ void lapic_init()
 }
 
 
-uint32_t* lapic_get_base()
+uint32_t* lapic_get_base(void)
 {
 	uint32_t eax, edx;
 	cpu_msr_read(MSR_IA32_APIC_BASE,&edx,&eax);
 	return (uint32_t*)(eax & 0xFFFFF000);
 }
 
-void lapic_enable()
+void lapic_enable(void)
 {
 	uint32_t eax,edx;
 	cpu_msr_read(MSR_IA32_APIC_BASE,&edx,&eax);
