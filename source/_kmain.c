@@ -22,7 +22,7 @@ void kmain()
 	cmos_rtc_t rtc;
 	cmos_read_rtc(&rtc);
 	printk("Today: %u/%u/%u %u:%u:%u\n",rtc.date_of_month,rtc.month,rtc.year,rtc.hours,rtc.minutes,rtc.seconds);
-
+	printk("LOCAL VARIABLE DECIMAL ADDRESS IN kmain.c: %u\n",&rtc);
 	gdt_init();
 	idt_init();
 
@@ -36,6 +36,14 @@ void kmain()
 	//acpi_find();
 
 	__asm__ __volatile__("sti"); //Enable interrupts
+
+	/*
+	// 3. Força o General Protection Fault (Vetor 13)
+    // Carrega o valor 0x9999 (um seletor que não existe na tua GDT) para o registo DS
+    __asm__ volatile(
+        "mov $0x9999, %ax\n\t"
+        "mov %ax, %ds"
+    );*/
 
 	while(TRUE) {
 		__asm__ __volatile__("hlt"); //Stop CPU exetcution.

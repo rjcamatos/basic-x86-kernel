@@ -54,14 +54,29 @@ void idt_exception_handler(uint32_t vector, idt_hargs_t args, uint32_t error)
     	/* GEMENI: As posições de 32 a 255 serão inicializadas automaticamente como NULL */
 	};
 
+
+	// O bloco nativo do CPU começa exatamente após o argumento 'error' na stack
+    idt_cpu_frame_t *cpu = (idt_cpu_frame_t *)((uint32_t*)&error + 1);
+
+    if (vector == 13) { // General Protection Fault
+        printk("Kernel Panic! Erro no endereco EIP: %u\n", cpu->eip);
+        printk("Segmento de codigo CS: %u\n", cpu->cs);
+		// --- PARAR O PROCESSADOR NA TOTALIDADE ---
+		// 1. Desativa todas as interrupções de hardware (evita que o timer ou teclado acordem o CPU)
+		// 2. Coloca o CPU em estado de suspensão (Halt)
+		// 3. Mantém num loop caso uma NMI tente acordar o processador
+		while(1) {
+			__asm__ volatile("cli; hlt");
+		}
+    }
+
 	printk("Exp %s|",vinfo[vector]);
 	printk("Exp %u|",vector);
-	__asm__("hlt");
 }
 
 void idt_interrupt_handler(uint32_t vector, idt_hargs_t args, uint32_t error)
-{
-	//printk("Int %u || ",vector);
+{	
+	printk("Int %u || ",vector);
 	// END-OF-INTERRUPT
 	pic_eio((uint8_t)vector); // required when pic is unmasked
 	lapic_eio(vector); // required when lapic is enabled
