@@ -10,7 +10,7 @@
  * 
  * Direcionado exclusivamente para a plataforma x86 (32-bits Modo Protegido).
  * 
- * Notes By GEMINI
+ * Comentários Por: GEMINI
  * 
  */
 

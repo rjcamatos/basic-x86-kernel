@@ -9,7 +9,7 @@
  * regras de acesso e qual o nível de privilégio exigido para ler, escrever 
  * ou executar cada bloco.
  *
- * Notes By GEMINI
+ * Comentários Por: GEMINI
  *  
  * */
 

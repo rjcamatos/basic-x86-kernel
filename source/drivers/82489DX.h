@@ -16,7 +16,7 @@
  * 
  * Nota: Ler comentário no topo dos ficheros: 8259A e 82093AA
  * 
- * By GEMINI
+ * Comentários Por: GEMINI
  * 
  */
 
@@ -28,7 +28,7 @@
 #include "82093AA.h"
 
 /* Local LAPIC Registers */
-#define LAPIC_ID				0x0020	//	Local LAPIC ID Register Read/Write.
+#define LAPIC_ID			0x0020	//	Local LAPIC ID Register Read/Write.
 #define LAPIC_VER			0x0030	//	Local LAPIC Version Register Read Only.
 #define LAPIC_TPR			0x0080	//	Task Priority Register (TPR) Read/Write.
 #define LAPIC_APR			0x0090	//	Arbitration Priority Register1 (APR) Read Only.
@@ -67,7 +67,7 @@
 #define LAPIC_ICR0			0x0300	//	Interrupt Command Register (ICR); bits 0-31 Read/Write.
 #define LAPIC_ICR1			0x0310	//	Interrupt Command Register (ICR); bits 32-63 Read/Write.
 #define LAPIC_LVTTR			0x0320	//	LVT Timer Register Read/Write.
-#define LAPIC_LVTTSR			0x0330	//	LVT Thermal Sensor Register2 Read/Write.
+#define LAPIC_LVTTSR		0x0330	//	LVT Thermal Sensor Register2 Read/Write.
 #define LAPIC_LVTPMCR		0x0340	//	LVT Performance Monitoring Counters Register3 Read/Write.
 #define LAPIC_LVTLINT0		0x0350	//	LVT LINT0 Register Read/Write.
 #define LAPIC_LVTLINT1		0x0360	//	LVT LINT1 Register Read/Write.
@@ -203,11 +203,14 @@ typedef struct {
 	uint_t tm:2;		// Timer Mode
 	uint_t _r2:13;		// Reserved
 } lapic_lvt_tr_t;
-#define LAPIC_LVTTR_VECTOR(v)	(v)
-#define LAPIC_LVTTR_MASK			(0b1<<16)
-#define LAPIC_LVTTR_ONESHOT		(0b00<<17)
-#define LAPIC_LVTTR_PERIODIC		(0b01<<17)
-#define LAPIC_LVTTR_TSCDEADLINE	(0b10<<17)
+
+/* Máscaras de Flags para o Registo LVT Timer */
+#define LAPIC_LVTTR_VECTOR(v)      ((v) & 0xFF)   // CORRIGIDO: Aplica uma máscara de 8 bits para o vetor não transbordar e corromper o registo.
+#define LAPIC_LVTTR_MASK           (1 << 16)      // Bit 16: Flag binária para mascarar (desativar) as interrupções do Timer.
+#define LAPIC_LVTTR_ONESHOT        (0 << 17)      // Bit 17 em 0: Modo Único (o temporizador conta até zero uma vez e para).
+#define LAPIC_LVTTR_PERIODIC       (1 << 17)      // Bit 17 em 1: Modo Periódico (reinicia automaticamente o valor inicial ao chegar a zero).
+/* Nota: O bit 18 foi removido daqui pois o modo TSC-Deadline não existe no hardware LAPIC puro de 32 bits. */
+	//#define LAPIC_LVTTR_TSCDEADLINE	(0b10<<17)
 
 
 // LVT Thermal Sensor and Performance Monitoring Counters Registers
@@ -233,16 +236,19 @@ typedef struct {
 	uint_t ma:1;		// Mask
 	uint_t _r2:15;		// Reserved
 } lapic_lvt_lint0_t, lapic_lvt_lint1_t ;
-#define LAPIC_LINT_VECTOR(v)	(v)
-#define LAPIC_LINT_FIXED		(0b000<<8)
-#define LAPIC_LINT_SMI		(0b010<<8)
-#define LAPIC_LINT_NMI		(0b100<<8)
-#define LAPIC_LINT_EXTINT	(0b111<<8)
-#define LAPIC_LINT_INIT		(0b101<<8)
-#define LAPIC_LINT_IIPP		(0b1<<13)	// Interrupt Input Pin Polarity
-#define LAPIC_LINT_RIRR		(0b1<<14)	// Remote IRR
-#define LAPIC_LINT_LEVEL		(0b1<<15)	// Level Trigger Mode otherwise Edge
-#define LAPIC_LINT_MASK		(0b1<<16)	// Mask the interrupt
+
+#define LAPIC_LINT_VECTOR(v)	((v)&0xFF)	// Perfeito! Isola os 8 bits do vetor.
+#define LAPIC_LINT_FIXED		(0b000<<8)	// Modo Fixo: Envia usando o vetor definido.
+#define LAPIC_LINT_SMI			(0b010<<8)	// System Management Interrupt (SMM).
+#define LAPIC_LINT_NMI			(0b100<<8)	// Interrupção Não Mascarável (ignora vetor).
+#define LAPIC_LINT_INIT			(0b101<<8)	// Sinal de INIT (soft-reset do núcleo).
+#define LAPIC_LINT_EXTINT		(0b111<<8)	// Modo de compatibilidade com o PIC 8259 externo.
+
+
+#define LAPIC_LINT_IIPP			(0b1<<13)	// Polaridade do Pino de Entrada de Interrupção (1 = Ativo em Baixo / Active Low).
+#define LAPIC_LINT_RIRR			(0b1<<14)	// Registo IRR Remoto (Indicador de interrupção remota pendente - Apenas leitura para o software).
+#define LAPIC_LINT_LEVEL		(0b1<<15)	// 1 = Level Triggered, 0 = Edge Triggered.
+#define LAPIC_LINT_MASK			(0b1<<16)	// 1 = Mascara (desativa) a interrupção no pino.
 
 // LVT Error Register
 typedef struct {

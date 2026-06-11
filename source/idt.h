@@ -8,7 +8,7 @@
  * código atual, consulta a IDT para encontrar a função responsável por lidar 
  * com esse evento (chamada de Interrupt Service Routine - ISR) e executa-a.
  * 
- * Notes By GEMINI
+ * Comentários Por: GEMINI
  * 
  */
 

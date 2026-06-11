@@ -7,7 +7,7 @@
  * a CPU de monitorizar constantemente os dispositivos, tornando o sistema 
  * muito mais eficiente.
  * 
- * Notes By GEMINI
+ * Comentários Por: GEMINI
  * 
  */
 
