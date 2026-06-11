@@ -1,12 +1,25 @@
-/*
-	Local LAPIC - Local Advanced Interrupt Controller
-
-	Is included in the P6 family, Pentium 4, Intel Xeon processors, and other
-	more recent Intel 64 and IA-32 processor families.
-
-	The 82489DX It's composed by the IOAPIC and this one.
-	It's integrated in the CPU in modern computers.
+/**
+ * 
+ * 82489DX APIC ( LAPIC + IOAPIC ) - Advanced Programmable Interrupt Controller
+ * 
+ * A arquitetura estreada pelo 82489DX substituiu o antigo PIC 8259A, evoluindo para a 
+ * dupla integrada LAPIC e o I/O APIC (como o 82093AA) para permitir o funcionamento
+ * dos processadores modernos com vários núcleos.
+ * 
+ * I/O APIC - Fica na placa-mãe. Funciona como uma central telefónica que recebe os avisos 
+ * dos componentes externos (teclado, rato, discos) e decide para qual núcleo 
+ * do processador os deve enviar.
+ * 
+ * LAPIC - Existe um embutido dentro de cada núcleo do processador. Recebe o aviso enviado pelo I/O APIC e 
+ * decide o momento exato em que o seu núcleo deve parar para resolver essa tarefa, além de permitir que 
+ * os vários núcleos falem diretamente uns com os outros.
+ * 
+ * Nota: Ler comentário no topo dos ficheros: 8259A e 82093AA
+ * 
+ * By GEMINI
+ * 
  */
+
 
 #ifndef DRIVERS_82489DX_H_
 #define DRIVERS_82489DX_H_

@@ -1,5 +1,15 @@
 /*
- * Global Descriptor Table
+ * GDT - Global Descriptor Table
+ *
+ * A Global Descriptor Table (GDT) é uma tabela de dados binária usada pelos 
+ * processadores da arquitetura Intel x86 e x86-64 para gerir a memória do 
+ * sistema.Ela é a primeira estrutura que o sistema operativo configura ao 
+ * iniciar. A sua função principal é dizer ao processador como a memória RAM 
+ * está dividida, quais as regras de acesso e quem tem permissão para ler 
+ * ou escrever em cada bloco.
+ *
+ * By GEMINI
+ *  
  * */
 
 #include "lib/mem.h"

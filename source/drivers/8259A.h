@@ -1,6 +1,14 @@
-/*
-	8259A PIC - Programmable Interrupt Controller
-	http://wiki.osdev.org/8259_PIC
+/**
+ * 8259A PIC - Programmable Interrupt Controller
+ * 
+ * Um Programmable Interrupt Controller (PIC) é um chip de hardware que 
+ * gere os pedidos de interrupção (IRQs) de múltiplos dispositivos periféricos, 
+ * encaminhando-os para o processador por ordem de prioridade. Ele liberta 
+ * a CPU de monitorizar constantemente os dispositivos, tornando o sistema 
+ * muito mais eficiente.
+ * 
+ * By GEMINI
+ * 
  */
 
 #ifndef DRIVERS_8259A_H_

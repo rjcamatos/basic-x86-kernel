@@ -1,7 +1,16 @@
 /*
- * Interrupt Descriptor Table
+ * IDT - Interrupt Descriptor Table
+ *
+ * A Interrupt Descriptor Table (IDT) é uma estrutura de dados binária usada
+ * pelas arquiteturas x86 e x86-64 para gerir interrupções e exceções.Quando o 
+ * processador deteta um evento — como um erro de divisão por zero, uma tecla 
+ * pressionada ou um sinal do temporizador —, ele suspende temporariamente o 
+ * código atual, consulta a IDT para encontrar a função responsável por lidar 
+ * com esse evento (chamada de Interrupt Service Routine - ISR) e executa-a.
+ * ~
+ * By GEMINI
+ * 
  * */
-
 
 #ifndef IDT_H_
 #define IDT_H_

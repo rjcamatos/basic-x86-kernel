@@ -1,5 +1,15 @@
-/*
-	82093AA IOAPIC - I/O ADVANCED PROGRAMMABLE INTERRUPT CONTROLLER
+/**
+ * 
+ * 82093AA IOAPIC - I/O Advanced Programmable Interrupt Controller
+ * 
+ * O Intel 82093AA I/O APIC (Advanced Programmable Interrupt Controller) é um chip 
+ * (ou bloco integrado no chipset) periférico cuja função principal é receber interrupções 
+ * de hardware dos dispositivos (teclado, PCI, discos) e encaminhá-las para os processadores 
+ * em sistemas multiprocessados (SMP/Multi-core).Ele veio substituir o antigo e obsoleto 
+ * controlador 8259A PIC.
+ * 
+ * By GEMINI
+ * 
  */
 
 #ifndef DRIVERS_82093AA_H_

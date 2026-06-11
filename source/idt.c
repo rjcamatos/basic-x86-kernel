@@ -1,6 +1,3 @@
-/*
- * Interrupt Descriptor Table
- * */
 #include "idt.h"
 #include "lib/mem.h"
 #include "lib/printk.h"
