@@ -41,6 +41,8 @@ typedef struct __attribute__((packed)) {
 	uint_t _r4:1;
 } kbd_command_indicator_t;
 
-extern void kbd_init();
+extern void kbd_init(void);
+
+extern void mouse_init(void);
 
 #endif /* DRIVERS_KBD_H_ */

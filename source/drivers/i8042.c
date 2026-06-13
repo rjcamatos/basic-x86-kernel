@@ -59,8 +59,8 @@ static void irq_handler(uint32_t vector, idt_hargs_t args, uint32_t error)
 {
 	byte_t c = i8042_read();
 	lapic_eio(vector);
-	pic_eio((uint8_t)vector);
-	printk("|%u|",(uint_t)c);
+	//pic_eio((uint8_t)vector);
+	printk("i8042: %u|",(uint_t)c);
 }
 
 void i8042_init()
@@ -81,6 +81,7 @@ void i8042_init()
 	cb.ps2_mode.keyboard_interrupt = 0;
 	cb.ps2_mode.mouse_interrupt = 0;
 	cb.ps2_mode.keyboard_translation = 0;
+
 	if( cb.ps2_mode.mouse_port_clock )
 	{
 		printk("    detected dual channel controller\n");
@@ -132,6 +133,7 @@ void i8042_init()
 		printk("    enabling mouse interface\n");
 		i8042_command(I8042_COMMAND_ENABLE_MOUSE_INTERFACE);
 	}
+
 }
 
 

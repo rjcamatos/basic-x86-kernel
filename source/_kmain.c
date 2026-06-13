@@ -31,7 +31,9 @@ void kmain()
 
 	lapic_init();
 	
-	kbd_init();
+	i8042_init(); 	//Enable Mouse and Keyboard
+	kbd_init();		//Initialize Keyboard
+	mouse_init();	//initialize Mouse
 
 	//acpi_find();
 
