@@ -1,0 +1,26 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Iniciar QEMU",
+            "type": "shell",
+            // Executa exatamente o teu comando do QEMU
+            "command": "qemu-system-i386 -enable-kvm -s -S -rtc base=localtime -kernel './build/ksrc/Kernel.elf' -append 'THE KERNEL ARGUMENTS'",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "."
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": ".",
+                    "endsPattern": "."
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        }
+    ]
+}

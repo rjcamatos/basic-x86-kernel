@@ -1,0 +1,14 @@
+
+bootimg/limine
+
+build/*
+
+!build/ksrc
+build/ksrc/*
+!build/ksrc/Kernel.elf
+
+!build/klib
+build/klib/*
+!build/klib/*.a
+
+

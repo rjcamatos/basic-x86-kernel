@@ -1,0 +1,41 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // IMPORTANTE: Isto vai invocar a tarefa criada acima antes de ligar o GDB
+            "preLaunchTask": "Iniciar QEMU",
+            
+            "name": "Depurar Kernel (QEMU)",
+            "type": "cppdbg",
+            "request": "launch",
+            // Caminho para o binário com os símbolos de depuração
+            "program": "${workspaceFolder}/build/ksrc/Kernel.elf",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            // Se usares Mac ou Windows com toolchain cruzada, altera para o teu gdb (ex: i686-elf-gdb)
+            "miDebuggerPath": "gdb",
+            // Endereço onde o QEMU está à escuta (definido no teu gdbinit)
+            "setupCommands": [
+                {
+                    "description": "Mudar o diretório de trabalho do GDB para a raiz do projeto",
+                    "text": "cd ${workspaceFolder}",
+                    "ignoreFailures": false
+                },
+                {
+                    "description": "Ativar formatação correta para GDB",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "Carregar scripts adicionais e breakpoints",
+                    "text": "source ${workspaceFolder}/gdbinit.gdb",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
