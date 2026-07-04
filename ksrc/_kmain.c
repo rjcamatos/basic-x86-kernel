@@ -76,9 +76,9 @@ void kmain(uint32_t magic, multiboot_info_t *mbi)
 	*/
 	
 	while(1) {
-		timer_delay_us(2000000); // Delay for 5 second
-		printk("TESTE 2\n");
-		//__asm__ volatile("hlt;");
+		//timer_delay_us(2000000); // Delay for 5 second
+		//printk("TESTE 2\n");
+		__asm__ volatile("hlt;");
 	}
 	
 }
