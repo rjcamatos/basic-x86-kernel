@@ -19,7 +19,7 @@ add-symbol-file ./build/ksrc/Kernel.elf $KERNEL_CONFIG_LMA
 #b kmain
 
 hbreak entry
-hbreak kmain
+hbreak acpi_find_rsdp
 
 
 

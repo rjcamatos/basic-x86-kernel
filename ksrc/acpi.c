@@ -1,59 +1,15 @@
-#include <types.h>
 #include "_config.h"
 
-#include "drivers/82489DX.h"
-#include "drivers/8259A.h"
-
-#include "mmu/paging.h"
-
-#include "printk.h"
-
-#include "io.h"
-#include "idt.h"
 #include "acpi.h"
 
+#include "drivers/82489DX.h"
 
-// ============================================================================
-// 2. ESTRUTURAS ACPI (RSDP, FADT e MADT)
-// ============================================================================
-struct rsdp_descriptor {
-    char signature[8];
-    uint8_t checksum;
-    char oem_id[6];
-    uint8_t revision;
-    uint32_t rsdt_address;
-} __attribute__((packed));
+#include "mmu/paging.h"
+#include "io.h"
+#include "idt.h"
+#include "mem.h"
+#include "printk.h"
 
-struct acpi_sdt_header {
-    char signature[4];
-    uint32_t length;
-    uint8_t revision;
-    uint8_t checksum;
-    char oem_id[6];
-    char oem_table_id[8];
-    uint32_t oem_revision;
-    uint32_t creator_id;
-    uint32_t creator_revision;
-} __attribute__((packed));
-
-struct fadt_table {
-    struct acpi_sdt_header header;
-    uint32_t firmware_ctrl;
-    uint32_t dsdt;
-    uint8_t  reserved;
-    uint8_t  preferred_pm_profile;
-    uint16_t sci_interrupt;
-    uint32_t smi_cmd;
-    uint8_t  acpi_enable;
-    uint8_t  acpi_disable;
-    uint8_t  s4bios_req;
-    uint8_t  pstate_cnt;
-    uint32_t pm1a_evt_blk;
-    uint32_t pm1b_evt_blk;
-    uint32_t pm1a_cnt_blk;
-    uint32_t pm1b_cnt_blk;
-    // Outros campos omitidos por brevidade
-} __attribute__((packed));
 
 
 
@@ -73,7 +29,7 @@ void ioapic_route_gsi(uint8_t pin) {
 // ============================================================================
 // 4. ATIVAÇÃO DO ACPI E BOTÃO DE ENERGIA
 // ============================================================================
-int init_acpi_power_button(struct fadt_table* fadt) {
+int init_acpi_power_button(struct acpi_FADT* fadt) {
     // 1. Ativa o subsistema ACPI no hardware
     if ((io_port_inw(fadt->pm1a_cnt_blk) & 0x01) == 0) {
         if (fadt->smi_cmd != 0) {
@@ -113,97 +69,66 @@ int init_acpi_power_button(struct fadt_table* fadt) {
     return 0; // ACPI ativo e monitorando o botão
 }
 
-
-struct rsdp_descriptor* find_rsdp(void) {
-    // 1. Procurar na região principal da BIOS (0xE0000 até 0xFFFFF)
-    uintptr_t bios_start = 0x000E0000 | KERNEL_CONFIG_VMA;
-    uintptr_t bios_end   = 0x000FFFFF | KERNEL_CONFIG_VMA;
-
-    // Avança de 16 em 16 bytes conforme a especificação ACPI
-    for (uintptr_t addr = bios_start; addr < bios_end; addr += 16) {
-        char* signature = (char*)addr;
-        
-        // Verifica se os 8 bytes correspondem a "RSD PTR "
-        if (signature[0] == 'R' && signature[1] == 'S' && 
-            signature[2] == 'D' && signature[3] == ' ' &&
-            signature[4] == 'P' && signature[5] == 'T' && 
-            signature[6] == 'R' && signature[7] == ' ') {
-            
-            // Opcional: Você pode validar o checksum aqui se quiser mais segurança
-            return (struct rsdp_descriptor*)addr;
-        }
-    }
-
-    // 2. Se não achou na BIOS, tenta ler o endereço da EBDA no endereço fixo 0x40E
-    uint16_t ebda_segment = *(volatile uint16_t*)0x0000040E;
-    uintptr_t ebda_start = (uint_t)(ebda_segment) << 4;
-    
-    if (ebda_start > 0x400 && ebda_start < 0xA0000) { // Garante endereço válido
-        for (uintptr_t addr = ebda_start; addr < ebda_start + 1024; addr += 16) {
-            char* signature = (char*)addr;
-            if (signature[0] == 'R' && signature[1] == 'S' && 
-                signature[2] == 'D' && signature[3] == ' ' &&
-                signature[4] == 'P' && signature[5] == 'T' && 
-                signature[6] == 'R' && signature[7] == ' ') {
-                return (struct rsdp_descriptor*)addr;
-            }
-        }
-    }
-
-    return NULL; // ACPI não encontrado (máquina muito antiga ou erro)
-}
-
 volatile uint_t power_off = 0;
 void acpi_interrupt_handler_power(uint32_t vector, idt_registers_t regs, idt_error_t error, idt_cpu_frame_t cpu)
 {	
 	printk("\n *** %s(%d) POWER INTERRUPT *** VECTOR: %u!\n",__FILE_NAME__,__LINE__,vector);
 	// END-OF-INTERRUPT
-	pic_eio((uint8_t)vector); // required when pic is unmasked
+	//pic_eio((uint8_t)vector); // required when pic is unmasked
 	lapic_eio(vector); // required when lapic is enabled
     __asm__ __volatile__("cli; hlt;");
 }
 
+struct acpi_RSDPDescriptor* acpi_find_rsdp() {
+    
+    uint16_t ebda_segment = *(uint16_t*)(0x040E + KERNEL_CONFIG_VMA);
+    uintptr_t ebda_address = (ebda_segment << 4) + KERNEL_CONFIG_VMA;
+    // increment 16 in 16 bytes conform ACPI specification
+    for (uintptr_t addr = ebda_address; addr < ebda_address + 1024; addr += 16) {
+        if (memcmp((void*)addr, "RSD PTR ", 8) == 0) {
+            return (struct acpi_RSDPDescriptor*)addr;
+        }
+    }
 
-// ============================================================================
-// 5. FUNÇÃO PRINCIPAL DO KERNEL (EXEMPLO DE CHAMADA)
-// ============================================================================
+    uintptr_t bios_start = 0x000E0000 + KERNEL_CONFIG_VMA;
+    uintptr_t bios_end   = 0x000FFFFF + KERNEL_CONFIG_VMA;
+    // increment 16 in 16 bytes conform ACPI specification
+    for (uintptr_t addr = bios_start; addr < bios_end; addr += 16) {
+        if (memcmp((void*)addr, "RSD PTR ", 8) == 0) {
+            return (struct acpi_RSDPDescriptor*)addr;
+        }
+    }
+    return NULL; // ACPI Unsuported
+}
+
+
 void acpi_init(void) {
     
     printk("Initializing ACPI !\n");
 
-    // Localizar a tabela FADT a partir do RSDP/RSDT
-    struct acpi_sdt_header* rsdt = (struct acpi_sdt_header*) (find_rsdp())->rsdt_address;
-    struct fadt_table* fadt = NULL;
+    struct acpi_SDTHeader* rsdt = (struct acpi_SDTHeader*) (acpi_find_rsdp())->rsdt_address;
     
     uint32_t rsdt_phys_base = (uint32_t)rsdt & 0xFFC00000; 
+
+    // Map the RSDT to the virtual address space to access its contents
     paging_map_4mb(rsdt_phys_base,rsdt_phys_base,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
 
-    int entries = (rsdt->length - sizeof(struct acpi_sdt_header)) / 4;
-    uint32_t* pointers = (uint32_t*)((uintptr_t)rsdt + sizeof(struct acpi_sdt_header));
-
+    int entries = (rsdt->length - sizeof(struct acpi_SDTHeader)) / 4;
+    uint32_t* pointers = (uint32_t*)((uintptr_t)rsdt + sizeof(struct acpi_SDTHeader));
 
     for (int i = 0; i < entries; i++) {
-        struct acpi_sdt_header* header = (struct acpi_sdt_header*)(uintptr_t)pointers[i];
-        if (header->signature[0] == 'F' && header->signature[1] == 'A' &&
-            header->signature[2] == 'C' && header->signature[3] == 'P') { // FACP é a assinatura da FADT
-            fadt = (struct fadt_table*)header;
+        struct acpi_SDTHeader* header = (struct acpi_SDTHeader*)(uintptr_t)pointers[i];
+        if( memcmp(header->signature, "FACP", 4) == 0) { // FACP é a assinatura da FADT
+            struct acpi_FADT* fadt = (struct acpi_FADT*)header;
+            // Inicializa o botão de energia e configura o roteamento do I/O APIC
+            init_acpi_power_button(fadt);
+            uint8_t power_button_gsi = (uint8_t)fadt->sci_interrupt; 
+            ioapic_route_gsi(power_button_gsi);
+            idt_set_interrupt_handler(41,&acpi_interrupt_handler_power);
             break;
         }
     }
 
-    if (fadt != NULL) {
-        // 1. Ativa o hardware ACPI e desmascara o botão de energia
-        init_acpi_power_button(fadt);
-
-        // 2. Descobre a GSI associada ao botão na FADT/MADT. 
-        // Em grande parte das implementações x86, o SCI mapeia para a GSI da FADT.
-        uint8_t power_button_gsi = (uint8_t)fadt->sci_interrupt; 
-
-        // 3. Aplica o roteamento no I/O APIC para gerar o vetor de interrupção 41
-        ioapic_route_gsi(power_button_gsi);
-
-        idt_set_interrupt_handler(41,&acpi_interrupt_handler_power);
-    }
 }
 
 
