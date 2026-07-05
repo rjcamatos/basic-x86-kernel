@@ -10,73 +10,51 @@
 #include "mem.h"
 #include "printk.h"
 
+volatile uint_t power_off = 0;
+struct acpi_FADT* global_fadt = NULL;
 
-
-
-// Configura o pino mapeado para redirecionar ao Vetor 41 (IRQ do botão)
-void ioapic_route_gsi(uint8_t pin) {
-    uint8_t reg_low = 0x10 + (2 * pin);
-    uint8_t reg_high = 0x11 + (2 * pin);
-
-    // Vetor 41 (0x29), Fixed Mode, Active Low (1), Level Triggered (1), Unmasked (0)
-    uint32_t low_bits = 0x29 | (0 << 8) | (0 << 11) | (1 << 13) | (1 << 15) | (0 << 16);
-    uint32_t high_bits = (0x00 << 24); // Alvo: APIC ID 0
-
-    ioapic_write(ioapic_base, reg_low, low_bits);
-    ioapic_write(ioapic_base, reg_high, high_bits);
-}
-
-// ============================================================================
-// 4. ATIVAÇÃO DO ACPI E BOTÃO DE ENERGIA
-// ============================================================================
-int init_acpi_power_button(struct acpi_FADT* fadt) {
-    // 1. Ativa o subsistema ACPI no hardware
-    if ((io_port_inw(fadt->pm1a_cnt_blk) & 0x01) == 0) {
-        if (fadt->smi_cmd != 0) {
-            io_port_outb(fadt->smi_cmd, fadt->acpi_enable);
-            
-            // Aguarda o hardware virar para o modo ACPI (SCI_EN torna-se 1)
-            int timeout = 0;
-            while ((io_port_inw(fadt->pm1a_cnt_blk) & 0x01) == 0) {
-                io_wait();
-                if (++timeout > 50000) return -1; // Falha de hardware
-            }
-        } else {
-            return -1; // Sem suporte a SMI CMD
+void acpi_interrupt_handler_power(uint32_t vector, idt_registers_t regs, idt_error_t error, idt_cpu_frame_t cpu)
+{
+    printk("\n *** %s(%d) POWER INTERRUPT *** VECTOR: %u!\n",__FILE_NAME__,__LINE__,vector);
+    if( global_fadt ) {
+        uint16_t status_a = io_port_inw((uint16_t)global_fadt->pm1a_evt_blk);
+        if( status_a & (1<<8) ) {
+            __asm__ __volatile__("cli; hlt;");
         }
     }
-
-    // 2. Habilita o evento do botão de energia (Power Button Enable - PWRBTN_EN)
-    // O registrador PM1_EN fica logo após o PM1_EVT_BLK (PM1_EVT_BLK + BlkLength / 2)
-    // Em arquiteturas x86 padrão, ele está no deslocamento fixo +2 de PM1a_EVT_BLK.
-    uint16_t pm1a_en_port = fadt->pm1a_evt_blk + 2;
-    
-    // Ler os eventos atuais configurados
-    uint16_t pm1_en_value = io_port_inw(pm1a_en_port);
-    
-    // Bit 8 define o PWRBTN_EN (Power Button Event Enable)
-    pm1_en_value |= (1 << 8); 
-    
-    // Salva a nova máscara de bits na porta do controlador
-    io_port_outw(pm1a_en_port, pm1_en_value);
-
-    // Repete o procedimento para o bloco B se ele existir na placa-mãe
-    if (fadt->pm1b_evt_blk != 0) {
-        uint16_t pm1b_en_port = fadt->pm1b_evt_blk + 2;
-        io_port_outw(pm1b_en_port, io_port_inw(pm1b_en_port) | (1 << 8));
-    }
-
-    return 0; // ACPI ativo e monitorando o botão
-}
-
-volatile uint_t power_off = 0;
-void acpi_interrupt_handler_power(uint32_t vector, idt_registers_t regs, idt_error_t error, idt_cpu_frame_t cpu)
-{	
-	printk("\n *** %s(%d) POWER INTERRUPT *** VECTOR: %u!\n",__FILE_NAME__,__LINE__,vector);
 	// END-OF-INTERRUPT
 	//pic_eio((uint8_t)vector); // required when pic is unmasked
 	lapic_eio(vector); // required when lapic is enabled
-    __asm__ __volatile__("cli; hlt;");
+}
+
+void init_acpi_power_button(struct acpi_FADT* fadt) {
+    
+    global_fadt = fadt;
+
+    // 1. Check if the power button is handled as a Fixed Feature or Control Method
+    if (fadt->flags & (1 << 4)) {
+        printk("    ACPI: Power button requires an AML interpreter. Direct FADT init aborted.\n");
+        return;
+    }
+
+    // 2. Calculate the Enable Register address for PM1a
+    // The register block is split in two halves: [Status Register] and [Enable Register]
+    uint16_t pm1a_enable_reg = fadt->pm1a_evt_blk + (fadt->pm1_evt_len / 2);
+    
+    // 3. Enable the power button event interrupt in PM1a
+    uint16_t en_val_a = io_port_indw(pm1a_enable_reg);
+    en_val_a |= (1 << 8);
+    io_port_outw(pm1a_enable_reg, en_val_a);
+
+    // 4. Configure the PM1b block if it exists (non-zero address)
+    if (fadt->pm1b_evt_blk != 0) {
+        uint16_t pm1b_enable_reg = fadt->pm1b_evt_blk + (fadt->pm1_evt_len / 2);
+        uint16_t en_val_b = io_port_inw(pm1b_enable_reg);
+        en_val_b |= (1 << 8);
+        io_port_outw(pm1b_enable_reg, en_val_b);
+    }
+
+    idt_set_interrupt_handler(32+(uint8_t)fadt->sci_interrupt,&acpi_interrupt_handler_power);
 }
 
 struct acpi_RSDPDescriptor* acpi_find_rsdp() {
@@ -127,11 +105,7 @@ void acpi_init(void) {
         header = (struct acpi_SDTHeader *)((uint32_t)header+KERNEL_CONFIG_ACPI_RSDP_VIRTUAL_ADDRESS);
         if( memcmp(header->signature, "FACP", 4) == 0) { // FACP é a assinatura da FADT
             struct acpi_FADT* fadt = (struct acpi_FADT*)header;
-            // Inicializa o botão de energia e configura o roteamento do I/O APIC
             init_acpi_power_button(fadt);
-            uint8_t power_button_gsi = (uint8_t)fadt->sci_interrupt; 
-            ioapic_route_gsi(power_button_gsi);
-            idt_set_interrupt_handler(41,&acpi_interrupt_handler_power);
         }
     }
 

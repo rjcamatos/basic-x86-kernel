@@ -48,8 +48,34 @@ struct acpi_FADT {
     uint32_t pm1b_evt_blk;
     uint32_t pm1a_cnt_blk;
     uint32_t pm1b_cnt_blk;
-    /* ... outros campos ... */
+    
+    /* === ACPI 1.0 EXTENSION FIELDS === */
+    uint32_t pm2_cnt_blk;       // PM2 Control Block physical base address
+    uint32_t pm_tmr_blk;        // Power Management Timer Block physical base address
+    uint32_t gpe0_blk;          // General Purpose Event 0 Register Block base address
+    uint32_t gpe1_blk;          // General Purpose Event 1 Register Block base address
+    uint8_t  pm1_evt_len;       // Number of bytes decoded for PM1a_EVT_BLK and PM1b_EVT_BLK
+    uint8_t  pm1_cnt_len;       // Number of bytes decoded for PM1a_CNT_BLK and PM1b_CNT_BLK
+    uint8_t  pm2_cnt_len;       // Number of bytes decoded for PM2_CNT_BLK
+    uint8_t  pm_tmr_len;        // Number of bytes decoded for PM_TMR_BLK
+    uint8_t  gpe0_blk_len;      // Number of bytes decoded for GPE0_BLK
+    uint8_t  gpe1_blk_len;      // Number of bytes decoded for GPE1_BLK
+    uint8_t  gpe1_base;         // Offset at which GPE1 based events start
+    uint8_t  cst_cnt;           // Support for C-state control
+    uint16_t p_lvl2_lat;        // Worst-case latency to enter and exit C2 state (in microseconds)
+    uint16_t p_lvl3_lat;        // Worst-case latency to enter and exit C3 state (in microseconds)
+    uint16_t flush_size;        // Number of flush strides read to flush dirty cache lines
+    uint16_t flush_stride;      // Cache line width in bytes
+    uint8_t  duty_offset;       // Bit offset of the processor's duty cycle field in P_CNT
+    uint8_t  duty_width;        // Bit width of the processor's duty cycle field in P_CNT
+    uint8_t  day_alrm;          // RTC CMOS RAM index to day-of-month alarm
+    uint8_t  mon_alrm;          // RTC CMOS RAM index to month-of-year alarm
+    uint8_t  century;           // RTC CMOS RAM index to century data
+    uint16_t iapc_boot_arch;    // IA-PC Boot Architecture Flags (e.g., legacy devices present)
+    uint8_t  reserved2;         // Reserved (must be 0)
+    uint32_t flags;             // Fixed Feature Flags (Bit 4: PWR_BUTTON)
 } __attribute__((packed));
+
 
 // MADT (Multiple APIC Description Table) - For the LAPIC
 struct acpi_MADT {
