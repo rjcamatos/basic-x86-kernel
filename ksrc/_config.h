@@ -40,4 +40,11 @@
  */
 #define KERNEL_CONFIG_TIMER_FALLBACK_FREQ 1000000000 // 1GHz
 
+/**
+ * Configure virtual memory address map of the ACPI,
+ * RSDP (Root System Description Pointer)
+ * Defaulting to KERNEL_CONFIG_VMA (Kernel Virtual Memory Address)
+ */
+#define KERNEL_CONFIG_ACPI_RSDP_VIRTUAL_ADDRESS KERNEL_CONFIG_VMA
+
 #endif

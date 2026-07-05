@@ -109,7 +109,7 @@ void acpi_init(void) {
     struct acpi_SDTHeader* rsdt = (struct acpi_SDTHeader*) (acpi_find_rsdp())->rsdt_address;
     
     uint32_t phys_base = (uint32_t)rsdt & 0xFFC00000; 
-    uint32_t virt_base = phys_base;
+    uint32_t virt_base = phys_base + KERNEL_CONFIG_ACPI_RSDP_VIRTUAL_ADDRESS;
 
     // Map the RSDT to the virtual address space to access its contents
     paging_map_4mb(phys_base,virt_base,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
@@ -122,6 +122,7 @@ void acpi_init(void) {
 
     for (int i = 0; i < entries; i++) {
         struct acpi_SDTHeader* header = (struct acpi_SDTHeader*)((uintptr_t)(pointers[i]));
+        header = (struct acpi_SDTHeader *)((uint32_t)header+KERNEL_CONFIG_ACPI_RSDP_VIRTUAL_ADDRESS);
         if( memcmp(header->signature, "FACP", 4) == 0) { // FACP é a assinatura da FADT
             struct acpi_FADT* fadt = (struct acpi_FADT*)header;
             // Inicializa o botão de energia e configura o roteamento do I/O APIC
