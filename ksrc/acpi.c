@@ -108,13 +108,15 @@ void acpi_init(void) {
 
     struct acpi_SDTHeader* rsdt = (struct acpi_SDTHeader*) (acpi_find_rsdp())->rsdt_address;
     
-    uint32_t phys_base = (uint32_t)rsdt & 0xFFC00000; 
+    uint32_t phys_base = (uint32_t)rsdt & 0xFFFFF000; 
     uint32_t virt_base = phys_base + KERNEL_CONFIG_ACPI_RSDP_VIRTUAL_ADDRESS;
 
     // Map the RSDT to the virtual address space to access its contents
-    paging_map_4mb(phys_base,virt_base,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
+    paging_map_4kb(phys_base,virt_base,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
+    // For big RSDT map the next 4Kib 
+    paging_map_4kb(phys_base+0x1000,virt_base+0x1000,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
     
-    uint32_t offset = (uint32_t)rsdt & 0x003FFFFF;
+    uint32_t offset = (uint32_t)rsdt & 0x00000FFF;
     rsdt = (struct acpi_SDTHeader*)(virt_base + offset);
 
     int entries = (rsdt->length - sizeof(struct acpi_SDTHeader)) / 4;
@@ -130,7 +132,6 @@ void acpi_init(void) {
             uint8_t power_button_gsi = (uint8_t)fadt->sci_interrupt; 
             ioapic_route_gsi(power_button_gsi);
             idt_set_interrupt_handler(41,&acpi_interrupt_handler_power);
-            break;
         }
     }
 

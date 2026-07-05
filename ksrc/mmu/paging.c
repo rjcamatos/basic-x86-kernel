@@ -36,7 +36,7 @@ paging_page_table_t* paging_get_page_table()
         if (!used) {
             // Retorna o endereço físico da tabela limpa
             paging_page_tables_t *pgtbls_phys = (paging_page_tables_t*)((uint_t)_pgtbls-KERNEL_CONFIG_VMA);
-            return &(*pgtbls_phys)[idx];
+            return &(*(pgtbls_phys))[idx];
         }
     }
     return NULL;
@@ -46,8 +46,8 @@ void paging_map_4mb(uint32_t phyaddr, uint32_t linaddr, uint32_t flags)
 {
 	paging_page_directory_t *pgdir = (paging_page_directory_t*)((uint_t)_pgdir);
 	*(uint32_t*)&(*pgdir)[linaddr>>22] = (phyaddr & 0xFFC00000)|PAGING_PDE_SIZE|flags;
-	//reload pages
-	//asm volatile("mov %%cr3, %%eax; mov %%eax, %%cr3" ::: "eax");
+	// Update Page Cache
+    asm volatile("invlpg (%0)" :: "r"(linaddr) : "memory");
 }
 
 void paging_map_4kb(uint32_t phyaddr, uint32_t linaddr, uint32_t flags)
@@ -67,8 +67,11 @@ void paging_map_4kb(uint32_t phyaddr, uint32_t linaddr, uint32_t flags)
         pgtbl = (paging_page_table_t*)(current_pde & 0xFFFFF000);
     }
 
+	pgtbl = (paging_page_table_t*)((uint32_t) pgtbl + KERNEL_CONFIG_VMA);
     uint32_t pt_index = (linaddr >> 12) & 0x3FF;
-    *(uint32_t*)&(*pgtbl)[pt_index] = (phyaddr & 0xFFFFF000) | flags;
+    *(uint32_t*)&(*(pgtbl))[pt_index] = (phyaddr & 0xFFFFF000) | flags;
+	// Update Page Cache
+    asm volatile("invlpg (%0)" :: "r"(linaddr) : "memory");
 }
 
 uint32_t paging_get_phyaddr(uint32_t linaddr)
@@ -98,8 +101,8 @@ void paging_init()
 	paging_page_tables_t *pgtbls = (paging_page_tables_t*)((uint_t)_pgtbls);
 
 	// For safe zero Page Directory and Page Tables
-	memset(*pgdir,0x00,sizeof(paging_page_directory_t));
-	memset(*pgtbls,0x00,sizeof(paging_page_tables_t));
+	memset(pgdir,0x00,sizeof(paging_page_directory_t));
+	memset(pgtbls,0x00,sizeof(paging_page_tables_t));
 	
 	// Dynamically map Kenel Memory
 	extern uint_t __kernel_physical_end;
