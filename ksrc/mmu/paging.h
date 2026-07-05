@@ -121,12 +121,31 @@ typedef paging_page_table_t paging_page_tables_t[KERNEL_CONFIG_PAGING_PAGE_TABLE
 /*
  * Sets a page directory to CR3 register
  * */
-extern void paging_set_page_directory(paging_page_directory_t *pd);
+static inline void paging_set_page_directory(paging_page_directory_t *pd)
+{
+	__asm__ __volatile__("mov %0,%%cr3"::"r"(pd):"memory");
+}
+
 
 /*
  * Returns the current page directory at CR3 register
  * */
-extern paging_page_directory_t* paging_get_page_directory(void);
+static inline paging_page_directory_t* paging_get_page_directory()
+{
+	//Note: inline function only works in optimizing compilation
+	voidptr_t rtv = NULL;
+	__asm__ __volatile__("mov %%cr3,%0":"=r"(rtv)::"memory");
+
+	return rtv;
+}
+
+/**
+ * Flush the paging Page Table Entry
+ */
+static inline void paging_flush_ptbl_entry(uint32_t linaddr)
+{
+    asm volatile("invlpg (%0)" :: "r"(linaddr) : "memory");
+}
 
 /* 
  * Returns an unreferenced page table

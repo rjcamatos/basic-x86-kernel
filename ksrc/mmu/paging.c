@@ -5,29 +5,20 @@
 static paging_page_directory_t _pgdir;	//The Page Directory
 static paging_page_tables_t _pgtbls;	//The Page Tables
 
-void paging_set_page_directory(paging_page_directory_t *pd)
-{
-	__asm__ __volatile__("mov %0,%%cr3"::"r"(pd):);
-}
 
-paging_page_directory_t* paging_get_page_directory()
-{
-	//Note: inline function only works in optimizing compilation
-	voidptr_t rtv = NULL;
-	__asm__ __volatile__("mov %%cr3,%0":"=r"(rtv)::);
-	return rtv;
-}
+
+
 
 paging_page_table_t* paging_get_page_table()
 {
-    uint32_t idx = 0;
-    uint32_t entry_idx = 0;
-    uint32_t num_tables = sizeof(paging_page_tables_t) / sizeof(paging_page_table_t);
+    uint_t num_tables = sizeof(paging_page_tables_t) / sizeof(paging_page_table_t);
 
 	printk("    number of kernel page tables: %d\n",num_tables);
-    for( ; idx < num_tables; idx++ ) {
-        uint32_t used = 0;
-        for(entry_idx = 0; entry_idx < 1024; entry_idx++) {
+
+    uint_t idx = 0;
+	for(idx=0 ; idx < num_tables; idx++ ) {
+        bool_t used = 0;
+        for(uint_t entry_idx = 0; entry_idx < 1024; entry_idx++) {
             if (_pgtbls[idx][entry_idx].present != 0) {
                 used = 1;
                 break;
@@ -46,15 +37,14 @@ void paging_map_4mb(uint32_t phyaddr, uint32_t linaddr, uint32_t flags)
 {
 	paging_page_directory_t *pgdir = (paging_page_directory_t*)((uint_t)_pgdir);
 	*(uint32_t*)&(*pgdir)[linaddr>>22] = (phyaddr & 0xFFC00000)|PAGING_PDE_SIZE|flags;
-	// Update Page Cache
-    asm volatile("invlpg (%0)" :: "r"(linaddr) : "memory");
+	paging_flush_ptbl_entry(linaddr);
 }
 
 void paging_map_4kb(uint32_t phyaddr, uint32_t linaddr, uint32_t flags)
 {
     paging_page_directory_t *pgdir = (paging_page_directory_t*)((uint_t)_pgdir);
-    uint32_t pd_index = linaddr >> 22;
-    uint32_t current_pde = *(uint32_t*)&(*pgdir)[pd_index];
+    uint_t pd_index = linaddr >> 22;
+    uint_t current_pde = *(uint_t*)&(*pgdir)[pd_index];
     paging_page_table_t *pgtbl = NULL;
 
     // Se o PDE não está presente, aloca uma nova Page Table
@@ -67,30 +57,30 @@ void paging_map_4kb(uint32_t phyaddr, uint32_t linaddr, uint32_t flags)
         pgtbl = (paging_page_table_t*)(current_pde & 0xFFFFF000);
     }
 
-	pgtbl = (paging_page_table_t*)((uint32_t) pgtbl + KERNEL_CONFIG_VMA);
-    uint32_t pt_index = (linaddr >> 12) & 0x3FF;
-    *(uint32_t*)&(*(pgtbl))[pt_index] = (phyaddr & 0xFFFFF000) | flags;
-	// Update Page Cache
-    asm volatile("invlpg (%0)" :: "r"(linaddr) : "memory");
+	pgtbl = (paging_page_table_t*)((uint_t) pgtbl + KERNEL_CONFIG_VMA);
+    uint_t pt_index = (linaddr >> 12) & 0x3FF;
+    *(uint_t*)&(*(pgtbl))[pt_index] = (phyaddr & 0xFFFFF000) | flags;
+
+	paging_flush_ptbl_entry(linaddr);
 }
 
 uint32_t paging_get_phyaddr(uint32_t linaddr)
 {
 	paging_page_directory_t *pgdir = paging_get_page_directory();
-	uint32_t entry = *(uint32_t*)&(*pgdir)[linaddr>>22];
+	uint_t entry = *(uint_t*)&(*pgdir)[linaddr>>22];
 
 	if( !(entry & PAGING_PDE_PRESENT) ) return 0;
 
 	if( entry & PAGING_PDE_SIZE ) {
         return (entry&0xFFC00000)|(linaddr&0x003FFFFF);
 	} else { //IS 4KB Pages !
-        uint32_t *pgtbl = (uint32_t*)(entry & 0xFFFFF000);
-        uint32_t pt_index = (linaddr >> 12) & 0x3FF;
-        uint32_t pte = pgtbl[pt_index];
+        uint_t *pgtbl = (uint_t*)(entry & 0xFFFFF000);
+        uint_t pt_index = (linaddr >> 12) & 0x3FF;
+        uint_t pte = pgtbl[pt_index];
         if( !(pte&PAGING_PTE_PRESENT) ) return 0;
         return (pte&0xFFFFF000)|(linaddr&0x00000FFF);
     }
-	return 0;
+	return (uint32_t)0;
 }
 
 void paging_init()
@@ -105,32 +95,20 @@ void paging_init()
 	memset(pgtbls,0x00,sizeof(paging_page_tables_t));
 	
 	// Dynamically map Kenel Memory
-	extern uint_t __kernel_physical_end;
-	uint_t map_count = 0;
-	uint_t map_addr = 0x00000000;
-	while( map_addr <= (uint_t)&__kernel_physical_end) {
-		printk("    mapping physadd: 0X%x, to: virtaddr 0X%x !\n",map_addr,KERNEL_CONFIG_VMA|map_addr);
-		// One o One Mapping (1:1) for Kernel Memory
-		//paging_map_4mb(map_addr,map_addr,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
+	extern voidptr_t __kernel_physical_end;
+	uint32_t map_addr = 0x00000000;
+	while( map_addr <= (uint32_t)__kernel_physical_end) {
 		//High Half Mapping for Kernel Memory
-		paging_map_4mb(map_addr,(KERNEL_CONFIG_VMA+map_addr),PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
-		map_addr += 0x00400000;
-		map_count += 4;
+		printk("    mapping 4MiB from phyaddr 0x%x to virtaddr 0x%x\n",map_addr,(map_addr+KERNEL_CONFIG_VMA));
+		paging_map_4mb(map_addr,(map_addr+KERNEL_CONFIG_VMA),PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
+		map_addr += 0x400000; //Next 4MiB
 	}
-	printk("    Kernel reserved dymamiclly: %dMiB !\n",map_count);
 
 	// IOAPIC mapping SIZE IS 4KB (1:1 mapping) (AT 0xFEC00000)
 	// AND LAPIC mapping SIZE IS 4KB (1:1 mapping) (AT 0xFEE00000)
 	uint32_t apic_flags = PAGING_PTE_PRESENT|PAGING_PTE_READWRITE|PAGING_PTE_SUPERVISOR|PAGING_PTE_CACHE_DISABLE|PAGING_PTE_WRITE_THROUGH;
 	paging_map_4kb(0xFEC00000,0xFEC00000,apic_flags);
 	paging_map_4kb(0xFEE00000,0xFEE00000,apic_flags);
-	
-
-	// ACPI mapping SIZE IS 4KB (1:1 mapping)
-	//paging_map_4mb(0x7FE0000,0x7FE0000,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
-	//this bellongs to acpi to
-	//paging_map_4mb(0x5ffe1853,0x5ffe1853,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
-
 
 	paging_set_page_directory((paging_page_directory_t*)((uint_t)_pgdir-KERNEL_CONFIG_VMA));
 
