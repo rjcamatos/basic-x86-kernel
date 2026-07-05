@@ -108,16 +108,20 @@ void acpi_init(void) {
 
     struct acpi_SDTHeader* rsdt = (struct acpi_SDTHeader*) (acpi_find_rsdp())->rsdt_address;
     
-    uint32_t rsdt_phys_base = (uint32_t)rsdt & 0xFFC00000; 
+    uint32_t phys_base = (uint32_t)rsdt & 0xFFC00000; 
+    uint32_t virt_base = phys_base;
 
     // Map the RSDT to the virtual address space to access its contents
-    paging_map_4mb(rsdt_phys_base,rsdt_phys_base,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
+    paging_map_4mb(phys_base,virt_base,PAGING_PDE_PRESENT|PAGING_PDE_READWRITE|PAGING_PDE_SUPERVISOR);
+    
+    uint32_t offset = (uint32_t)rsdt & 0x003FFFFF;
+    rsdt = (struct acpi_SDTHeader*)(virt_base + offset);
 
     int entries = (rsdt->length - sizeof(struct acpi_SDTHeader)) / 4;
     uint32_t* pointers = (uint32_t*)((uintptr_t)rsdt + sizeof(struct acpi_SDTHeader));
 
     for (int i = 0; i < entries; i++) {
-        struct acpi_SDTHeader* header = (struct acpi_SDTHeader*)(uintptr_t)pointers[i];
+        struct acpi_SDTHeader* header = (struct acpi_SDTHeader*)((uintptr_t)(pointers[i]));
         if( memcmp(header->signature, "FACP", 4) == 0) { // FACP é a assinatura da FADT
             struct acpi_FADT* fadt = (struct acpi_FADT*)header;
             // Inicializa o botão de energia e configura o roteamento do I/O APIC

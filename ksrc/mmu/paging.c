@@ -46,6 +46,8 @@ void paging_map_4mb(uint32_t phyaddr, uint32_t linaddr, uint32_t flags)
 {
 	paging_page_directory_t *pgdir = (paging_page_directory_t*)((uint_t)_pgdir);
 	*(uint32_t*)&(*pgdir)[linaddr>>22] = (phyaddr & 0xFFC00000)|PAGING_PDE_SIZE|flags;
+	//reload pages
+	//asm volatile("mov %%cr3, %%eax; mov %%eax, %%cr3" ::: "eax");
 }
 
 void paging_map_4kb(uint32_t phyaddr, uint32_t linaddr, uint32_t flags)
